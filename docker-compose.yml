@@ -1,0 +1,51 @@
+version: "3.2"
+services:
+  app-db:
+    container_name: app-db
+    image: mysql:5.6
+    environment:
+      MYSQL_ROOT_PASSWORD: "eSaude123"
+      MYSQL_DATABASE: "openmrs"
+      MYSQL_USER: "openmrs"
+      MYSQL_PASSWORD: "openmrs"
+    ports:
+      - "3320:3306"
+    command:               
+      --max_allowed_packet=404857600
+      --innodb-log-file-size=5G
+    networks:
+      - network
+    volumes:
+      - datadb:/var/lib/mysql
+      - ./dump:/docker-entrypoint-initdb.d
+
+  app-tomcat:         
+    container_name: app-tomcat
+    image: tomcat:8-jre8-temurin
+    environment:
+      JAVA_OPTS: "-Dfile.encoding=UTF-8 -server -Djava.awt.headless=true -XX:+UseConcMarkSweepGC -Xms512m -Xmx1536m -XX:PermSize=768m -XX:MaxPermSize=1024m -Duser.timezone=Africa/Maputo"
+      
+    ports:
+        - "8080:8080"
+    networks:
+          - network
+    depends_on:
+          - "app-db"
+    volumes:
+      - runtime-props:/root/.OpenMRS
+      - ./mrs/webapps:/usr/local/tomcat/webapps
+      - ./mrs/OpenMRS:/usr/local/tomcat/.OpenMRS
+      - ./mrs/openmrs-runtime.properties:/root/.OpenMRS/openmrs-runtime.properties
+    healthcheck:
+      test: "/usr/bin/mysql --user=root --password=root --execute \"SHOW DATABASES;\""
+      interval: 2s
+      timeout: 30s
+      retries: 15
+
+networks:
+  network:
+    driver: bridge
+
+volumes:
+  datadb:
+  runtime-props:
